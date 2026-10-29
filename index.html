@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#d9f2fb">
+<meta name="description" content="Missão Fechamento: explore a empresa, descubra a origem da diferença e salve o fechamento antes que o tempo acabe.">
+<title>Missão Fechamento — Jogo responsivo</title>
+<style>
+:root{color-scheme:light;--ink:#243951;--blue:#3177b9;--teal:#42aa90;--cream:#fffdf2;--sun:#f4ce62;--muted:#668496;--line:#c6e1eb;--shadow:#a9d2dd}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;overscroll-behavior:none;background:#d9f2fb;font-family:'Trebuchet MS',Verdana,sans-serif;color:var(--ink)}
+body{display:flex;align-items:center;justify-content:center}button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}button:focus-visible{outline:3px solid #e2ad38;outline-offset:2px}
+#shell{position:relative;isolation:isolate;width:100%;height:100%;height:100dvh;overflow:hidden;background:#d9f2fb}
+#playfield{position:relative;flex:1 1 auto;min-width:0;min-height:0;height:100%;overflow:hidden;background:#dcf3f8}
+#desktopPanel{display:none}
+@media(min-width:700px) and (max-width:1023px){#shell{width:100%;height:100dvh}}
+#world{display:block;width:100%;height:100%;touch-action:none;image-rendering:pixelated;cursor:crosshair}
+.hidden{display:none!important}
+#hud{position:absolute;z-index:3;left:0;right:0;top:0;display:flex;gap:6px;justify-content:center;padding:calc(9px + env(safe-area-inset-top)) 9px 0;pointer-events:none}
+.hudBox{flex:1;min-width:0;background:#fffef5f2;border:2px solid #fff;box-shadow:0 4px 0 var(--shadow);border-radius:11px;padding:7px 4px 6px;text-align:center}
+.hudBox span{display:block;color:#628297;font-size:9px;letter-spacing:.75px;font-weight:1000}.hudBox strong{display:block;font-weight:1000;font-size:16px;white-space:nowrap;margin-top:1px}
+.hudBox.alert strong{color:#c64745}.hudBox.alert{animation:flash .8s infinite alternate}
+#meter{position:absolute;z-index:3;top:calc(69px + env(safe-area-inset-top));left:11px;right:11px;height:7px;border-radius:9px;background:#ffffffdb;border:1px solid #bddde6;pointer-events:none;overflow:hidden}
+#meterFill{height:100%;width:100%;background:var(--teal);transition:width .15s linear}
+#toolbar{position:absolute;z-index:4;top:calc(86px + env(safe-area-inset-top));left:10px;right:10px;display:flex;gap:6px;justify-content:space-between;align-items:flex-start;pointer-events:none}
+.pill{border:2px solid #fff;box-shadow:0 4px 0 #a8d0df;background:#fffef5f0;border-radius:12px;min-height:38px;padding:7px 10px;color:#284960;font-weight:1000;font-size:11px;pointer-events:auto}
+.pill.primary{background:#f5cf65;color:#4d4225;box-shadow:0 4px 0 #d1aa4c}.pill:active,.ctrl:active,.primaryBtn:active{transform:translateY(3px);box-shadow:0 1px 0 #9bbbc7}
+#toast{position:absolute;z-index:5;top:calc(133px + env(safe-area-inset-top));left:50%;transform:translate(-50%,-8px);width:max-content;max-width:calc(100% - 26px);background:#fffbdf;border:3px solid #fff;box-shadow:0 5px 0 #e2c985;border-radius:12px;text-align:center;font-size:12px;font-weight:900;padding:10px 13px;opacity:0;transition:opacity .18s,transform .18s;pointer-events:none}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+#near{position:absolute;z-index:3;left:50%;bottom:calc(144px + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:calc(100% - 20px);background:#fffce7f7;border:2px solid #fff;border-radius:12px;padding:6px 12px;box-shadow:0 4px 0 #cdb875;font-size:11px;font-weight:900;white-space:nowrap;pointer-events:none}
+#controls{position:absolute;z-index:3;bottom:calc(12px + env(safe-area-inset-bottom));left:14px;right:14px;display:flex;align-items:flex-end;justify-content:space-between;pointer-events:none}
+#dpad{display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,41px);gap:2px;pointer-events:auto}
+.ctrl{border:2px solid #fff;background:#fff9e4e6;color:#2e6488;border-radius:12px;font-weight:1000;font-size:19px;box-shadow:0 4px 0 #a8cbd7;user-select:none;-webkit-user-select:none;touch-action:none}
+.ctrl:active,.ctrl.pressed{background:#bceaf3;transform:translateY(2px);box-shadow:0 2px 0 #a8cbd7}
+.ctrl.up{grid-column:2;grid-row:1}.ctrl.left{grid-column:1;grid-row:2}.ctrl.right{grid-column:3;grid-row:2}.ctrl.down{grid-column:2;grid-row:3}
+#interact{pointer-events:auto;border:3px solid #fff;border-radius:50%;background:#f5cf65;box-shadow:0 6px 0 #caa54a;width:83px;height:83px;font-weight:1000;color:#55452c;font-size:13px;line-height:1.35;letter-spacing:.2px;margin:0 4px 18px 0;touch-action:manipulation}
+#interact:active{transform:translateY(4px);box-shadow:0 2px 0 #caa54a}
+#hint{position:absolute;bottom:calc(3px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);white-space:nowrap;font-size:9px;color:#4c7186;font-weight:900;opacity:.9;z-index:2;pointer-events:none}
+.screen,.veil{position:absolute;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:#c9eafaeb;padding:14px;overflow:auto;overscroll-behavior:contain}
+.screen{background:linear-gradient(160deg,#d9f2fb 0%,#d4f5e9 52%,#fff2cf 100%)}
+.card{width:100%;max-width:405px;background:var(--cream);border:4px solid #fff;border-radius:22px;box-shadow:0 9px 0 #add2db,0 18px 30px #57798f29;padding:20px 21px;text-align:center;max-height:calc(100dvh - 28px);overflow:auto;overscroll-behavior:contain}
+.eyebrow{font-size:11px;letter-spacing:2px;font-weight:1000;color:var(--teal);margin-bottom:4px}
+.hero{font-size:57px;line-height:1.1;margin:9px 0 12px;filter:drop-shadow(0 5px 0 #dfeced)}
+h1,h2,h3{margin:5px 0 10px;color:#2a5475;line-height:1.08}h1{font-size:clamp(34px,8.4vw,46px);letter-spacing:-1.6px;font-weight:1000}h2{font-size:26px;font-weight:1000}h3{font-size:17px}
+p{line-height:1.47;font-size:14px;margin:8px 0 15px}p.small{font-size:11px;color:#668496;line-height:1.5}strong{font-weight:1000}
+.primaryBtn,.secondaryBtn{display:block;width:100%;border:3px solid #fff;border-radius:13px;padding:13px 12px;font-size:14px;font-weight:1000;margin:10px auto 0;line-height:1.2;box-shadow:0 5px 0 #b4a568;background:var(--sun);color:#58492e;transition:transform .1s}
+.secondaryBtn{background:#e3f3f6;box-shadow:0 5px 0 #bed9df;color:#315e76}.primaryBtn:disabled{opacity:.5;cursor:not-allowed}
+.tertiaryBtn{border:none;background:none;color:#33709b;text-decoration:underline;font-weight:900;font-size:12px;padding:9px}
+.instructions{margin:14px 0 10px;padding:9px;border-radius:11px;background:#e8f6f2;font-size:12px;line-height:1.5;color:#38596c;font-weight:800}
+kbd{font-family:inherit;font-size:11px;padding:2px 5px;background:white;border-radius:5px;border:1px solid #c8dbe0;color:#376d90}
+.tagrow{display:flex;justify-content:center;flex-wrap:wrap;gap:5px;margin:11px 0}.tag{background:#e4f1f8;color:#336d88;border:1px solid #d2e2eb;border-radius:40px;font-size:10px;font-weight:900;padding:5px 9px}
+.veil{z-index:8;background:#23475c9a;align-items:center;padding:12px}.veil .card{max-width:420px;background:#fffefa;padding:19px;box-shadow:0 8px 0 #8fb9be,0 18px 35px #09273a55;text-align:left}
+.veil .card h2{text-align:center;font-size:24px}.veil .card p{margin-bottom:12px}.dialogQuote{background:#eaf5f8;border-left:5px solid #64a9cb;padding:11px 12px;border-radius:5px 11px 11px 5px;margin:12px 0;line-height:1.42;font-size:14px}
+.evidence{background:#fff6d8;border:2px dashed #e7c779;border-radius:12px;padding:11px;font-size:13px;line-height:1.43;margin:12px 0}.evidence b{display:block;color:#976d2a;margin-bottom:4px;font-size:11px;letter-spacing:.5px}
+.smallCaps{letter-spacing:1.3px;font-size:10px;color:#678c9d;font-weight:1000;text-transform:uppercase;text-align:center}
+.stepLabel{font-size:12px;line-height:1.2;letter-spacing:.3px;font-weight:900;color:#3c6d88;margin:14px 0 7px}
+.choice{display:flex;align-items:flex-start;gap:9px;background:#eaf4f8;border:2px solid #d6e9f0;border-radius:12px;padding:10px;margin:6px 0;cursor:pointer;font-size:12.5px;line-height:1.35;font-weight:800}
+.choice:has(input:checked){border-color:#398bb4;background:#e0f4ef}.choice input{accent-color:#3177b9;margin:1px 0 0;flex:none;min-width:17px;min-height:17px}
+.notes{margin:12px 0}.note{padding:10px;margin-bottom:7px;background:#eaf3f7;border-radius:11px;font-size:12px;line-height:1.42}.note b{display:block;font-size:11px;letter-spacing:.5px;color:#2e7596;margin-bottom:3px}.muted{color:#6b8b9a}
+.resultGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:12px 0}.resultStat{background:#e4f1f8;border-radius:10px;padding:10px 4px}.resultStat strong{display:block;font-size:19px}.resultStat span{font-size:9px;color:#5d8399;font-weight:900}
+.lesson{border-left:4px solid #54ac94;text-align:left;font-size:12px;line-height:1.45;border-radius:8px;background:#e9f6ef;padding:11px;margin:12px 0}.lesson b{display:block;color:#326c60;margin-bottom:4px}
+#support{margin-top:16px;padding:13px 12px;border:2px dashed #dfcaa0;background:#fff9e9;border-radius:12px;text-align:left;font-size:12px;line-height:1.42}
+#support strong{display:block;margin-bottom:6px}#support .qrArea{display:flex;align-items:center;gap:9px;margin-top:9px}#support img{width:88px;height:88px;image-rendering:pixelated;background:#fff;border:3px solid #fff;border-radius:5px}#support textarea{width:100%;height:54px;resize:none;font:10px/1.3 monospace;border:1px solid #dabd89;border-radius:8px;color:#4b525c;background:#fff;padding:6px}
+#support .mini{background:#fff;border:1px solid #cfb77f;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:900;cursor:pointer;color:#7a612d;margin-top:4px}
+#result .card{text-align:center}#result .lesson{text-align:left}
+#pauseTip{font-size:12px;color:#678596;text-align:center}
+.slogan{font-size:12px;color:#337998;background:#e7f4f7;border-radius:10px;padding:8px 10px;font-style:italic}
+.persona{display:flex;gap:12px;align-items:center;padding:9px;background:#e4f2f6;border-radius:12px;margin-top:11px}
+.avatar{flex:none;width:43px;height:43px;border-radius:50%;background:#fff8df;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:25px;box-shadow:0 3px 0 #c7dce1}
+.persona strong{display:block;font-size:12px}.persona small{display:block;color:#577f90;font-size:11px;line-height:1.35;margin-top:2px}
+.crossTag{margin:12px 0;background:#f2eafd;border:2px dashed #c2a4db;padding:10px;border-radius:12px;color:#765a96;font-size:12px;font-weight:900;line-height:1.45}
+.crossNote{background:#ece7f8;border-left:4px solid #9775ba}
+.miniText{font-size:11px;color:#628598;line-height:1.43}
+.rankPanel{background:#e5f2f7;border-radius:14px;padding:12px;margin:12px 0 8px}
+.rankPanel strong{display:block;font-size:19px;color:#2d6585;margin:6px 0 10px}
+.rankBar{height:9px;border-radius:20px;background:#c7dae3;overflow:hidden}
+#rankFill{height:100%;width:0%;border-radius:20px;background:#43aa91;transition:width .5s}
+.scoreDetails{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin:10px 0;text-align:left}
+.scoreDetails div{padding:8px 9px;background:#eef5f7;border-radius:9px;font-size:11px;font-weight:900;color:#526f80}
+.scoreDetails b{float:right;color:#30698c}
+.lessonBlue{border-left-color:#6aa6ce;background:#eaf3fa}.lessonBlue b{color:#32658d}
+@media(max-width:370px){.persona{padding:6px;gap:7px}.avatar{height:34px;width:34px;font-size:19px}.scoreDetails{gap:4px}}
+
+@keyframes flash{from{box-shadow:0 4px 0 var(--shadow)}to{box-shadow:0 4px 0 #f0a4a0}}
+@media(max-height:680px){.card{padding:13px 17px}.hero{font-size:41px;margin:4px 0}h1{font-size:36px}p{font-size:12px;margin:6px 0 10px}.instructions{margin:8px 0;font-size:11px}#dpad{grid-template-columns:repeat(3,43px);grid-template-rows:repeat(3,37px)}#interact{width:72px;height:72px;font-size:11px;margin-bottom:11px}#near{bottom:calc(126px + env(safe-area-inset-bottom))}}
+/* No computador o mapa ocupa toda a área útil e o caderno fica ao lado. */
+#desktopPanel{flex:0 0 clamp(260px,23vw,335px);min-width:0;height:100%;background:#fffdf3;border-left:4px solid #ffffff;box-shadow:-6px 0 16px #5c97ab20;padding:16px 14px 12px;overflow:hidden;flex-direction:column;gap:10px;color:#294860}
+.sideBrand{border-radius:14px;padding:14px 12px;background:#d9eff7;border:2px solid #ffffff;display:flex;flex-direction:column;gap:3px;box-shadow:0 4px 0 #b4d7de}
+.sideBrand span{font-size:16px;font-weight:1000;color:#2d668d;letter-spacing:.3px}
+.sideBrand small{font-size:10px;color:#54859c;font-weight:900;letter-spacing:1.1px}
+.sideMission{background:#fff5da;border:2px solid #f1e4b9;border-radius:12px;padding:11px 12px;font-size:12px;line-height:1.4}
+.sideMission b{display:block;font-size:14px;color:#ab6731;margin-bottom:4px}
+.sideHeading{font-size:11px;letter-spacing:.7px;font-weight:1000;color:#356e8e;display:flex;justify-content:space-between;margin-top:3px}
+.sideHeading span{font-size:11px;color:#579b8e}
+.sideRooms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.sideRoom{border:2px solid #d4e6eb;border-radius:10px;background:#ecf6f8;padding:9px 5px;display:flex;flex-direction:column;gap:3px;text-align:center;font-size:11px;font-weight:900;min-height:53px;color:#345d77}
+.sideRoom.seen{background:#d9f3e7;border-color:#b6dfcd}
+.sideRoom small{font-size:9px;color:#648a95;font-weight:900}
+.sideRoom:hover{border-color:#70b4c6;background:#fffefa}
+.sideEvidence{min-height:65px;flex:1 1 80px;overflow-y:auto;overscroll-behavior:contain;background:#f1f8f8;border:1px solid #d6e8ea;border-radius:11px;padding:10px 11px;font-size:11px;line-height:1.45;color:#587587}
+.sideEvidence .entry{border-bottom:1px dashed #c9dee1;padding:6px 1px}.sideEvidence .entry:first-child{padding-top:0}.sideEvidence .entry:last-child{border-bottom:0}
+.sideEvidence strong{display:block;color:#33758e;font-size:11px}
+.sideActions{display:flex;gap:7px}.sideActions button{flex:1;border:2px solid white;border-radius:10px;padding:11px 4px;box-shadow:0 4px 0 #bed9df;background:#dceef3;font-size:11px;font-weight:1000;color:#2f6180}
+.sideActions button:last-child{background:#f5cf65;box-shadow:0 4px 0 #cfaf57;color:#644c25}
+.sideFooter{font-size:10px;color:#7999a5;text-align:center;line-height:1.5}
+@media(min-width:1024px) and (min-aspect-ratio:6/5){
+ #shell{display:flex;width:100%;height:100dvh}
+ #desktopPanel:not(.hidden){display:flex}
+ #controls,#hint{display:none!important}
+ #hud{left:12px;right:12px;gap:10px;top:5px;max-width:700px;margin:0 auto}
+ .hudBox{padding:9px 12px 7px}.hudBox span{font-size:10px}.hudBox strong{font-size:20px}
+ #meter{top:80px;left:25px;right:25px;height:8px}
+ #toolbar{top:96px;justify-content:center;gap:10px}
+ .pill{font-size:12px;padding:9px 16px}
+ #toast{top:160px}
+ #near{bottom:14px}
+ .screen .card{max-width:590px}
+ #result .card{max-width:760px}
+ .veil .card{max-width:600px}
+ #intro .hero{font-size:68px}
+ #intro h1{font-size:53px}
+}
+@media(max-width:600px){#shell{height:100dvh}#world{cursor:default}}
+@media(max-height:560px) and (max-width:1023px){#hud{padding-top:5px}.hudBox{padding:3px 4px}.hudBox strong{font-size:13px}#meter{top:48px}#toolbar{top:60px}#toast{top:103px}#dpad{grid-template-columns:repeat(3,36px);grid-template-rows:repeat(3,30px)}#interact{height:60px;width:66px;margin-bottom:8px;font-size:10px}#near{bottom:100px}#hint{display:none!important}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div id="shell">
+ <div id="playfield">
+ <canvas id="world" aria-label="Mapa da empresa em estilo arcade: caminhe até os setores para investigar"></canvas>
+ <div id="hud" class="hidden">
+  <div class="hudBox"><span>DIFERENÇA</span><strong id="hudAmount">R$ 0</strong></div>
+  <div class="hudBox" id="timeBox"><span>RESTA</span><strong id="hudTime">05:00</strong></div>
+  <div class="hudBox"><span>PISTAS · CRUZ.</span><strong id="hudClues">0/6 · 🔗0</strong></div>
+ </div>
+ <div id="meter" class="hidden"><div id="meterFill"></div></div>
+ <div id="toolbar" class="hidden">
+  <button class="pill" id="notesButton" aria-label="Abrir caderno de evidências">📒 PISTAS</button>
+  <button class="pill" id="mapButton" aria-label="Abrir mapa de setores">🗺️ MAPA</button>
+  <button class="pill primary" id="decideButton" aria-label="Concluir fechamento">📊 CONCLUIR</button>
+  <button class="pill" id="pauseButton" aria-label="Pausar">Ⅱ</button>
+ </div>
+ <div id="toast" role="status" aria-live="polite"></div>
+ <div id="near" class="hidden">APERTE E PARA INVESTIGAR</div>
+ <div id="controls" class="hidden">
+  <div id="dpad">
+   <button class="ctrl up" data-dir="up" aria-label="Andar para cima">▲</button>
+   <button class="ctrl left" data-dir="left" aria-label="Andar para a esquerda">◀</button>
+   <button class="ctrl right" data-dir="right" aria-label="Andar para a direita">▶</button>
+   <button class="ctrl down" data-dir="down" aria-label="Andar para baixo">▼</button>
+  </div>
+  <button id="interact" aria-label="Conversar com setor próximo">🔍<br>INVESTIGAR</button>
+ </div>
+ <div id="hint" class="hidden">PC: SETAS / WASD · E INTERAGE · P PAUSA</div>
+ </div><!-- fim da área do jogo -->
+ <aside id="desktopPanel" class="hidden" aria-label="Painel de investigação">
+  <div class="sideBrand"><span>🏭 MISSÃO FECHAMENTO</span><small>PAINEL DO CONTROLLER</small></div>
+  <div id="sideCase" class="sideMission"></div>
+  <div class="sideHeading">🗺️ ESCOLHA UM SETOR <span id="sideCount">0/6</span></div>
+  <div class="sideRooms" id="sideRooms"></div>
+  <div class="sideHeading">📒 DOCUMENTOS & CRUZAMENTOS</div>
+  <div class="sideEvidence" id="sideEvidence" aria-live="polite">Investigue um setor para começar a coletar evidências.</div>
+  <div class="sideActions"><button id="sideNotebook" type="button">📒 ABRIR CADERNO</button><button id="sideFinish" type="button">📊 CONCLUIR</button></div>
+  <div class="sideFooter">⌨️ WASD / SETAS para andar · E para investigar<br>Toque no mapa ou selecione um setor acima</div>
+ </aside>
+ <section class="screen" id="intro">
+  <div class="card">
+   <div class="eyebrow">O ARCADE DA CONTROLADORIA</div>
+   <div class="hero" aria-hidden="true">🕵️📊⏱️</div>
+   <h1>MISSÃO<br>FECHAMENTO</h1>
+   <p><strong>O mês terminou. A diferença apareceu. A diretoria quer o resultado!</strong></p><p class="slogan">“Todo número conta uma história. Descubra se ela é verdadeira.”</p>
+   <p>Explore a fábrica, converse com os setores, reúna evidências e descubra a causa do problema antes que o relógio zere.</p>
+   <button class="primaryBtn" id="playBtn">🚀 COMEÇAR O FECHAMENTO</button>
+   <button class="secondaryBtn" id="trainingBtn">📘 MODO TREINAMENTO · 8 MIN</button>
+   <div class="instructions"><strong>COMO JOGAR</strong><br>🖥️ <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ou setas · <kbd>E</kbd> investigar<br>📱 Setas na tela ou toque em um setor para ir até lá</div>
+   <div class="tagrow"><span class="tag">🧩 Casos diferentes</span><span class="tag">🏭 6 setores</span><span class="tag">🔎 Cruze evidências</span><span class="tag">✅ Valide a correção</span></div>
+   <p class="small">O mapa se adapta automaticamente: horizontal com painel lateral no PC, vertical com controles por toque no celular.<br>Partidas de até 5 minutos (ou 8 no treinamento). A classificação vai de Refém da Planilha a Lenda da Controladoria.<br>Jogo educativo, independente e gratuito. Funciona offline e não exige cadastro.</p>
+  </div>
+ </section>
+ <section class="veil hidden" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="card" id="modalCard"></div>
+ </section>
+ <section class="screen hidden" id="result">
+  <div class="card">
+   <div class="eyebrow" id="resultEyebrow">FIM DO FECHAMENTO</div>
+   <div class="hero" id="resultEmoji" aria-hidden="true">🏆</div>
+   <h2 id="resultTitle">Fechamento concluído!</h2>
+   <p id="resultDescription"></p>
+   <div class="rankPanel"><span class="smallCaps">SEU PERFIL DE CONTROLLER</span><strong id="resultRank">—</strong><div class="rankBar"><div id="rankFill"></div></div></div>
+   <div class="resultGrid">
+    <div class="resultStat"><strong id="resultPoints">0</strong><span>PONTOS / 100</span></div>
+    <div class="resultStat"><strong id="resultClues">0/6</strong><span>PISTAS</span></div>
+    <div class="resultStat"><strong id="resultTime">00:00</strong><span>TEMPO RESTANTE</span></div>
+   </div>
+   <div class="scoreDetails" id="scoreDetails"></div>
+   <div class="lesson"><b>💡 O QUE REALMENTE ACONTECEU</b><span id="resultLesson"></span></div><div class="lesson lessonBlue"><b>📋 DIAGNÓSTICO DA SUA DECISÃO</b><span id="resultFeedback"></span></div>
+   <p id="resultRecord" class="small"></p>
+   <button class="primaryBtn" id="againBtn">🔁 JOGAR OUTRA MISSÃO</button>
+   <button class="secondaryBtn" id="shareBtn">🔗 COMPARTILHAR RESULTADO</button>
+   <p class="small" id="shareMsg" aria-live="polite"></p>
+   <div id="support">
+    <strong>☕ Gostou da missão?</strong>
+    O jogo é gratuito! Se quiser apoiar novos projetos, o desenvolvedor aceita um café. É totalmente opcional e não oferece vantagens no jogo.
+    <div class="qrArea"><img id="pixQr" alt="QR Code Pix opcional para apoiar o criador do jogo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAScAAAEnAQAAAADDIbjsAAAEX0lEQVR4nO2aMY7sNhOEvx4twMm4N+CcRBofy4DWkq0B/mNZer4IN3NIZRSgUTmgxg79/CePhh+jEaaDUqtZXaymib9funxFEHyP+m9FyczsvprxZf24Xb+sb5/bheftCg82M7Oa0eOlDIOuALn1H52febBdeN7opFgvenT4kdzSRB1+iloS5NbvuNnv4fyjVvRvrx891vLsfs+IzRKC9Fi+Ga5/FuXtppkmrmZmyD7syjqGb47r76MGAYTtzo/mD6+IpQfrHcC0fzNcXxW1ml2hWYD/xfXOAxSmiML4yWJ2qxc9kiQdfg86vKKbS+4HudnrXNXu2sI5dAkyfopuBmj9jhaNZGiqRi/tSKkpac+t3wOWenT4MbiDoWLGvMA6xa0LI9tPPMLVEmjmwXZfd9a7t672undLamKGJrrZ78EdXtLsJ2XTHurNPVLqyZb64JR63AwBk6IkRR1QPXotpfiH6M5t0OMWTZJSzUoBHfTklp6MHwtmLEHutEPtnHP4Hc0MAq+ow0tOkmj9iJY0VIz+AquLdvdvn25Jzxv2abes96fl3xJsXai5117AbzctiYDMReveh8V+SA/8sU5yx7fD9TVLSn0ACFIa5BaNwUkjWBoidet7dEBwSoPoUhN10IfcekkzjSSNdTOm9Eox/Jl2KNw5+7q71QFoSUN0M0PU7PeQoQ9uSY0001eNXmlQbiGAl4pSUAI6KeauasYsClnSHtwBgdbvIbd+DJpfG6Jm9JIi+Engd9wMZJOUuwTgR6pGf2r5l2bwihkvuUXj2YkrRn/4ndye+iC6w08xd4kADLFwZ7XoL7COuHkdycv7g+1Oz1XvPeDfcDPPip3AUjlltX4sdV+UvhLwL9CYwR30odR9lwiYRrRoDLReVSsFvUACg3KnIpMjLYPc7OtWCkfhlz1kS5xfYWbQXxRUNXp6MqfGjJhORwRLjdySqJoxT128By2pUW5fGtMdfor/Ar6fIpYIbtEYMn4PxWfo0iAnTRVzzgX73NHsx88MTaRdp7jd/VtwvwaztbPtVjPfH34PQB/cQRPdop3cpSFm0yS3pLr9nFLZfgzu8GMAmggM0S2pibSVdytpiqXaZ4aYW/riDmbTSaVVo09NlFIj8HugS41o/STN9GRLNXvIp4/ZSeUVcpeGeHppaYjV5/6gD0XTdKkp0oCuzEwm6ajeEemLd+Pm8ygYpURwc9nOdedeqZGUhuIfuJlG+TX5CUDt59o9ZCt9dSwGSbZC+k2EyjVmmQoCbklDEce5ZYhaNJXHetGfd0R+SIO2n/xHd4UHmN7Y7ut22+48K55bXcodEb3/bO6XdSR/oQfWrUPBnQPQmtHzswFDGTdcWe121TufXgnssr591o0ewH/Y1pkr1l82vZHheSvmcrXoX/dz/Igrfuw5fBZdGpSp2s8p59rcaS+jtyINZv9qs0o1e8iXckdE7w/4Aqwf703E0tOuv2kMWxdcrLdy7Pt9zO9R/1fUH0S+w/EZx62cAAAAAElFTkSuQmCC"><div style="flex:1;min-width:0"><textarea id="pixText" readonly aria-label="Código Pix copia e cola"></textarea><button class="mini" id="pixCopy">COPIAR PIX</button></div></div>
+    <div id="pixMsg" class="small"></div>
+   </div>
+  </div>
+ </section>
+</div>
+<script>
+(()=>{'use strict';
+// Jogo autônomo: nenhum recurso externo é carregado.
+const PIX='00020126810014br.gov.bcb.pix01365286f24a-b9b2-474d-985e-e0ce15cab7d20219Obrigado pelo cafe!5204000053039865802BR5924Gustavo Henrique Ortega 6009Sao Paulo62230519daqr69359996103429363040282';
+const $=id=>document.getElementById(id), cv=$('world'),ctx=cv.getContext('2d',{alpha:false}),shell=$('shell');
+let WW=640, WH=1134; const speed=255, DEFAULT_TIME=300, TRAIN_TIME=480, MAX_EVID=6;
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),rand=(a,b)=>a+Math.random()*(b-a);
+const formatTime=t=>{const s=Math.max(0,Math.ceil(t));return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`};
+const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const shuffle=a=>{let r=a.slice();for(let i=r.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[r[i],r[j]]=[r[j],r[i]]}return r};
+const ROOMS=[
+ {key:'producao',name:'PRODUÇÃO',emoji:'⚙️',x:22,y:96,w:276,h:227,color:'#fde6c3',wall:'#d4af7c',npc:'#d18c44'},
+ {key:'estoque',name:'ESTOQUE',emoji:'📦',x:342,y:96,w:276,h:227,color:'#d6efdd',wall:'#9dc9aa',npc:'#4b9d77'},
+ {key:'compras',name:'COMPRAS',emoji:'🛒',x:22,y:393,w:276,h:227,color:'#f5e2f8',wall:'#ceadd4',npc:'#a474bc'},
+ {key:'fiscal',name:'FISCAL',emoji:'🧾',x:342,y:393,w:276,h:227,color:'#d9eafd',wall:'#9cbedb',npc:'#568cc1'},
+ {key:'custos',name:'CUSTOS',emoji:'📊',x:22,y:690,w:276,h:227,color:'#fff1ca',wall:'#dcc17e',npc:'#e0b34f'},
+ {key:'contabilidade',name:'CONTABILIDADE',emoji:'🧮',x:342,y:690,w:276,h:227,color:'#dfebe9',wall:'#a8c9c2',npc:'#5caca5'}
+];
+for(const r of ROOMS){r.nx=r.x+r.w/2;r.ny=r.y+154}
+const DESK={x:320,y:1041,key:'desk',name:'CONTROLADORIA'};
+const CASES=[
+ {id:'consumo',title:'O estoque não fecha',amount:'R$ 180 mil',alert:'O saldo de matéria-prima no ERP está R$ 180 mil acima da posição operacional. O resultado está esperando sua liberação.',
+  causes:[{id:'a',text:'Consumo de matéria-prima não apontado em uma ordem de produção.'},{id:'b',text:'Nota fiscal de compra registrada duas vezes.'},{id:'c',text:'Rateio incorreto de despesas administrativas.'}],
+  fixes:[{id:'a',text:'Validar os apontamentos, registrar o consumo pendente, conciliar os saldos e reprocessar custos.'},{id:'b',text:'Lançar ajuste manual de R$ 180 mil sem documentação para fazer o saldo bater.'},{id:'c',text:'Liberar o fechamento e investigar no mês seguinte.'}],
+  cause:'a',fix:'a',lesson:'Na OP-184, o consumo físico de 18.000 kg (R$ 10/kg) não foi apontado no ERP. Isso superavaliou a matéria-prima e distorceu a apropriação dos custos. A Controladoria precisa cruzar dados físicos, operacionais e contábeis; corrigir com evidências; e validar o reprocessamento.',
+  clues:{
+   producao:{person:'Bia, líder de produção',quote:'A OP-184 rodou no turno B. Tivemos instabilidade no sistema e alguns apontamentos ficaram na fila.',evidence:'Relatório da OP-184: 18.000 kg consumidos fisicamente, sem baixa confirmada no ERP.'},
+   estoque:{person:'Rafa, almoxarifado',quote:'Aqui contamos tudo. O físico está menor que o saldo do sistema; a diferença é de 18 toneladas do insumo X.',evidence:'Conciliação física × sistema: 18.000 kg × R$ 10/kg = R$ 180.000.'},
+   compras:{person:'Léo, compras',quote:'Revisei as aquisições do insumo X. Pedidos, recebimentos e fornecedores conferem.',evidence:'Entradas de compras sem duplicidades identificadas no período.'},
+   fiscal:{person:'Nina, fiscal',quote:'As notas de entrada passaram pela conferência. Não achei documento duplicado desse material.',evidence:'Notas de compra do insumo X registradas uma vez cada.'},
+   custos:{person:'Cris, custos',quote:'O custo apropriado à OP-184 ficou muito abaixo do padrão, mesmo com produção normal.',evidence:'Custo de materiais da OP-184 abaixo do esperado em R$ 180.000.'},
+   contabilidade:{person:'Dani, contabilidade',quote:'O razão tem saldo de matéria-prima acima do relatório operacional. Não localizei a contrapartida de consumo da OP-184.',evidence:'Razão de estoques sem a baixa de consumo correspondente à OP-184.'}
+  }},
+ {id:'competencia',title:'A nota que não chegou',amount:'R$ 96 mil',alert:'A manutenção de R$ 96 mil foi realizada, mas a despesa não aparece no fechamento. O fornecedor emitiu a nota fiscal, porém o documento não chegou para lançamento. O prazo está acabando!',
+  causes:[{id:'a',text:'Nota fiscal do serviço já executado não enviada ao Fiscal e, por isso, ainda não lançada no sistema.'},{id:'b',text:'Quebra física de matéria-prima não contabilizada.'},{id:'c',text:'Pagamento bancário duplicado do fornecedor.'}],
+  fixes:[{id:'a',text:'Pedir a Compras que cobre imediatamente do fornecedor a nota/XML, encaminhar ao Fiscal e confirmar o lançamento antes do prazo de fechamento.'},{id:'b',text:'Deixar a cobrança para o mês seguinte e divulgar a margem sem sinalizar a pendência.'},{id:'c',text:'Lançar um valor genérico sem documento ou conferência apenas para eliminar a diferença.'}],
+  cause:'a',fix:'a',lesson:'O serviço de manutenção de R$ 96 mil foi executado e a nota fiscal já havia sido emitida, mas o fornecedor ainda não encaminhara o XML. Sem o documento, o Fiscal não havia registrado a nota e a despesa ficou fora da prévia de fechamento. A solução deste desafio é Compras solicitar o envio imediato, Fiscal realizar o lançamento dentro do prazo e Controladoria validar o resultado. Se a nota não chegar a tempo, a pendência deve ser comunicada e o tratamento contábil avaliado conforme as regras aplicáveis; isso não significa uma proibição geral de reconhecimento sem nota.',
+  clues:{
+   producao:{person:'Bia, líder de produção',quote:'A manutenção terminou no dia 29. Eu assinei a ordem de serviço, mas o custo ainda não apareceu no relatório.',evidence:'Ordem de serviço assinada em 29/09: manutenção concluída no período.'},
+   estoque:{person:'Rafa, almoxarifado',quote:'Não houve consumo extra de peças. Os estoques estão conciliados.',evidence:'Relatório físico e contábil de materiais sem diferença relevante.'},
+   compras:{person:'Léo, compras',quote:'O fornecedor confirmou que já emitiu a nota de R$ 96 mil, mas esqueceu de enviar o XML. Vou cobrar agora para o Fiscal registrar a tempo!',evidence:'Contrato e medição de R$ 96 mil aprovados; fornecedor confirmou emissão da NF, pendente de envio ao cliente.'},
+   fiscal:{person:'Nina, fiscal',quote:'O documento não chegou à caixa fiscal nem ao ERP. Se Compras cobrar o XML agora, ainda há tempo de registrar neste fechamento.',evidence:'Consulta de documentos recebidos e do ERP: nota da manutenção ainda não lançada.'},
+   custos:{person:'Cris, custos',quote:'A manutenção aconteceu, mas o custo caiu R$ 96 mil. Essa margem alta não representa economia operacional.',evidence:'Variação favorável de R$ 96 mil sem redução real da manutenção realizada.'},
+   contabilidade:{person:'Dani, contabilidade',quote:'A nota de R$ 96 mil ainda não foi lançada e a prévia de resultado está sem essa despesa. Precisamos tratar a pendência antes de liberar.',evidence:'Razão contábil sem lançamento da nota fiscal de manutenção de R$ 96.000.'}
+  }},
+ {id:'duplicidade',title:'O saldo dobrou?',amount:'R$ 125 mil',alert:'O saldo de estoque e fornecedores está R$ 125 mil acima dos relatórios operacionais. O fornecedor diz que está tudo correto.',
+  causes:[{id:'a',text:'Uma mesma nota de compra entrou duas vezes no sistema contábil.'},{id:'b',text:'Houve consumo de material de produção sem apontamento.'},{id:'c',text:'Uma nota fiscal de serviço ficou pendente de lançamento.'}],
+  fixes:[{id:'a',text:'Confirmar a duplicidade, estornar o registro indevido com trilha de aprovação e reconciliar estoque e fornecedores.'},{id:'b',text:'Pagar as duas obrigações para evitar atraso com o fornecedor.'},{id:'c',text:'Fazer uma baixa genérica de estoque sem verificar o contas a pagar.'}],
+  cause:'a',fix:'a',lesson:'O recebimento físico aconteceu uma vez, mas a mesma nota foi importada duas vezes para o ERP. Estoques e fornecedores ficaram superavaliados em R$ 125 mil. A correção exige análise documental, estorno rastreável e conciliação entre compras, fiscal, estoque e contabilidade.',
+  clues:{
+   producao:{person:'Bia, líder de produção',quote:'A fábrica trabalhou com consumo normal. Nenhuma ordem de produção teve falta de apontamento.',evidence:'Apontamentos de consumo e produção conciliados.'},
+   estoque:{person:'Rafa, almoxarifado',quote:'Recebemos uma carga. No meu controle há um único comprovante de entrega.',evidence:'WMS: recebimento físico único de R$ 125.000; ERP contábil mostra duas entradas.'},
+   compras:{person:'Léo, compras',quote:'Há apenas um pedido e uma entrega. O fornecedor não reconhece a segunda cobrança.',evidence:'Pedido de compra e confirmação do fornecedor: apenas um fornecimento de R$ 125.000.'},
+   fiscal:{person:'Nina, fiscal',quote:'A integração reprocessou um lote após uma queda. Encontrei duas importações do mesmo número de nota.',evidence:'Mesmo número e chave de NF importados duas vezes no lote fiscal.'},
+   custos:{person:'Cris, custos',quote:'O custo unitário dos materiais não mudou. Esse aumento não veio da fabricação.',evidence:'Custos unitários e consumos industriais sem oscilação compatível com R$ 125.000.'},
+   contabilidade:{person:'Dani, contabilidade',quote:'Duas partidas idênticas foram lançadas para estoque e fornecedores.',evidence:'Razão mostra dois débitos em estoque e dois créditos a fornecedores para a mesma NF.'}
+  }}
+];
+// Personalidades fazem a empresa parecer viva, sem substituir documentos por opiniões.
+const PERSONAS={
+ producao:{icon:'👩🏽‍🏭',trait:'Bia — turno sempre corrido',joke:'“Se a máquina parou, é porque alguém marcou reunião com ela.”'},
+ estoque:{icon:'🧑🏻‍🔧',trait:'Rafa — guardião das contagens',joke:'“Caixa não desaparece. Só muda de lugar sem avisar.”'},
+ compras:{icon:'🧑🏽‍💼',trait:'Léo — negociador oficial',joke:'“Desconto é comigo. Milagre, só com aprovação.”'},
+ fiscal:{icon:'👩🏻‍💻',trait:'Nina — detetive de notas',joke:'“A nota está certa... ou o XML está tentando me enganar.”'},
+ custos:{icon:'👩🏼‍📊',trait:'Cris — mestre das variações',joke:'“O número fechou. Agora falta explicar por quê.”'},
+ contabilidade:{icon:'👨🏾‍💼',trait:'Dani — amigo do razão',joke:'“Débito e crédito são amigos. Nem sempre se encontram.”'}
+};
+// O confronto só é habilitado depois de obter dados de AMBOS os setores.
+const CROSS_DATA={
+ consumo:[
+ {id:'op',rooms:['producao','estoque'],title:'18 toneladas que sumiram',ask:'A Produção afirma que consumiu o insumo, mas o estoque ainda o mostra no ERP. Como explicar os dois registros?',answer:'A equipe confirmou o consumo físico e identificou a fila de apontamentos da OP-184 não integrada. O estoque físico foi baixado, mas o sistema não recebeu o movimento.',wrong:'As duas áreas confirmam que uma compra foi registrada duas vezes.',takeaway:'Produção e Estoque juntos comprovam que a divergência é falta de apontamento, não compra duplicada.'},
+ {id:'custo',rooms:['producao','custos'],title:'O custo da OP-184',ask:'Por que o custo da ordem ficou tão baixo se a produção ocorreu normalmente?',answer:'Ao cruzar o consumo de 18.000 kg com R$ 10/kg e o relatório de custos, Cris encontra exatamente R$ 180 mil não apropriados à OP-184.',wrong:'A produção seguiu normalmente; portanto, nenhum custo adicional precisa ser reconhecido.',takeaway:'Cruzamento confirma impacto simultâneo em matéria-prima e custo de produção.'}
+ ],
+ competencia:[
+ {id:'servico',rooms:['producao','compras'],title:'Serviço executado, nota a caminho',ask:'O que explica a diferença entre o serviço realizado e a despesa registrada?',answer:'Produção confirma a manutenção com ordem assinada. Compras apresenta a medição de R$ 96 mil e a informação de que a nota foi emitida, mas ainda não enviada ao Fiscal.',wrong:'A diferença aconteceu porque a manutenção foi cancelada e não houve serviço.',takeaway:'A manutenção ocorreu e o fornecedor confirmou a emissão; falta receber a nota para lançar a despesa.'},
+ {id:'provisao',rooms:['fiscal','contabilidade'],title:'Cadê o XML da manutenção?',ask:'A nota já está lançada? Qual providência operacional resolve a diferença neste fechamento?',answer:'Fiscal não recebeu o XML e Contabilidade não identifica o lançamento. Compras deve cobrar o fornecedor imediatamente; após o recebimento, Fiscal registra a nota e Contabilidade valida a despesa no resultado.',wrong:'O Fiscal já lançou a nota; basta ignorar a diferença apontada pelo balancete.',takeaway:'A nota pendente de envio e lançamento explica a diferença; é preciso cobrá-la e validar a escrituração antes do prazo.'}
+ ],
+ duplicidade:[
+ {id:'nf',rooms:['estoque','fiscal'],title:'Uma carga, duas integrações',ask:'Por que existe um recebimento físico e duas entradas contábeis?',answer:'Rafa apresenta o único comprovante do WMS. Nina localiza duas importações da mesma chave de NF após reprocessamento da interface.',wrong:'Uma única entrega física confirma que ocorreram duas compras separadas.',takeaway:'Uma carga física + duas importações da mesma NF evidenciam duplicidade no ERP.'},
+ {id:'razao',rooms:['compras','contabilidade'],title:'Uma obrigação virou duas',ask:'O fornecedor faturou duas vezes ou o sistema criou uma segunda obrigação?',answer:'Léo mostra um único fornecimento; Dani compara o razão e encontra dois lançamentos idênticos em estoques e fornecedores.',wrong:'Uma cobrança repetida significa que o fornecedor precisa receber duas vezes.',takeaway:'O cruzamento permite direcionar o estorno rastreável do lançamento duplicado.'}
+ ]
+};
+const VALIDATIONS={
+ consumo:{prompt:'Depois do apontamento e reprocessamento, o que comprova que a diferença foi eliminada?',answers:[{id:'a',text:'Confrontar baixa da OP, saldo físico × ERP e custo reprocessado, verificando a diferença de R$ 180 mil.'},{id:'b',text:'Conferir apenas se o painel da diretoria ficou verde.'},{id:'c',text:'Pedir um e-mail dizendo que tudo ficou certo, sem revalidar saldos.'}],correct:'a'},
+ competencia:{prompt:'Compras solicitou a nota e o Fiscal recebeu o XML dentro do prazo. Como confirmar que a diferença foi resolvida?',answers:[{id:'a',text:'Conferir a NF recebida, o lançamento fiscal/contábil e a despesa de R$ 96 mil no balancete, reconciliando com a medição.'},{id:'b',text:'Apagar a medição para o ERP deixar de apontar divergência.'},{id:'c',text:'Conferir apenas a promessa de envio do fornecedor, sem verificar o lançamento.'}],correct:'a'},
+ duplicidade:{prompt:'Após o estorno do lançamento em duplicidade, qual evidência libera o fechamento?',answers:[{id:'a',text:'Conciliar uma única NF, uma entrada física e um único passivo com estorno aprovado no razão.'},{id:'b',text:'Conferir apenas a redução do estoque, sem olhar fornecedores.'},{id:'c',text:'Pedir que Compras pague as duas notas para limpar o relatório.'}],correct:'a'}
+};
+const EVENTS=[
+ {id:'cfo',after:2,title:'📞 A diretoria está na linha!',message:'“Manda o EBITDA agora! Pode ser a versão preliminar, mas não demora.”',options:[
+  {good:false,text:'Mandar o número ainda não validado como se fosse definitivo.',reply:'O número saiu bonito, mas a decisão pode ser tomada sobre uma base errada.'},
+  {good:true,text:'Informar impacto, divergência e horário previsto para a posição validada.',reply:'A gestão recebe transparência sobre risco e prazo, sem confundir prévia com fechamento.'}
+ ]},
+ {id:'reprocessamento',after:4,title:'🔄 O ERP resolveu participar!',message:'Um relatório de custos foi atualizado enquanto você investigava. Qual base usar?',options:[
+  {good:true,text:'Conferir versão, horário e reconciliação antes de atualizar a análise.',reply:'Você preservou a rastreabilidade e evitou comparar dados de versões diferentes.'},
+  {good:false,text:'Misturar a planilha antiga com o novo relatório para ganhar tempo.',reply:'Dados de versões distintas podem produzir uma diferença que nem existe.'}
+ ]}
+];
+const RANKS=[
+ {min:95,name:'👑 Lenda da Controladoria'},
+ {min:80,name:'🏆 Mestre do Fechamento'},
+ {min:60,name:'🕵️ Detetive da Controladoria'},
+ {min:40,name:'🔎 Caçador de Divergências'},
+ {min:0,name:'📑 Refém da Planilha'}
+];
+let g={mode:'intro',case:CASES[0],time:300,total:300,visited:new Set(),crossed:new Set(),eventsDone:new Set(),eventsGood:0,eventsSeen:0,answers:null,player:{x:320,y:999,facing:1,step:0},camera:{x:0,y:0},target:null,open:null,points:0,training:false,ended:false};
+let viewW=440,viewH=800,zoom=1,wide=false,last=0,noticeTimer=0,muted=false,audio=null,pressed={up:false,down:false,left:false,right:false},holding=0;
+function sound(freq=520,dur=.09){if(muted)return;try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();const o=audio.createOscillator(),gain=audio.createGain();o.type='sine';o.frequency.setValueAtTime(freq,audio.currentTime);gain.gain.setValueAtTime(.06,audio.currentTime);gain.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+dur);o.connect(gain);gain.connect(audio.destination);o.start();o.stop(audio.currentTime+dur)}catch(_){}}
+function arrangeRooms(){
+ if(wide){
+  const px=28,gapX=18,gapY=46,top=154,bottom=142;
+  const rw=(WW-px*2-gapX*2)/3;
+  const rh=Math.max(174,(WH-top-bottom-gapY)/2);
+  ROOMS.forEach((r,i)=>{const col=i%3,row=Math.floor(i/3);r.x=px+col*(rw+gapX);r.y=top+row*(rh+gapY);r.w=rw;r.h=rh;r.nx=r.x+rw/2;r.ny=r.y+Math.min(rh-50,rh*.69)});
+  DESK.x=WW/2;DESK.y=WH-67;
+ }else{
+  ROOMS.forEach((r,i)=>{r.x=i%2?342:22;r.y=96+Math.floor(i/2)*297;r.w=276;r.h=227;r.nx=r.x+r.w/2;r.ny=r.y+154});
+  DESK.x=320;DESK.y=1041;
+ }
+}
+function resize(){
+ const field=$('playfield').getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);
+ const wasWide=wide,oldWW=WW,oldWH=WH;
+ const oldPlayer=g?.player?{...g.player}:null;
+ const nearOld=oldPlayer?ROOMS.find(r=>Math.hypot(oldPlayer.x-r.nx,oldPlayer.y-r.ny)<110):null;
+ const oldTarget=g?.target?.key||null;
+ wide=window.matchMedia('(min-width:1024px) and (min-aspect-ratio:6/5)').matches;
+ viewW=Math.max(1,field.width);viewH=Math.max(1,field.height);
+ zoom=wide?clamp(Math.min(viewW/1060,viewH/790),.58,1.7):clamp(viewW/550,.65,1);
+ WW=wide?viewW/zoom:640;WH=wide?viewH/zoom:1134;
+ arrangeRooms();
+ if(oldPlayer&&wasWide!==wide){
+  if(nearOld){const newRoom=ROOMS.find(r=>r.key===nearOld.key);g.player.x=newRoom.nx;g.player.y=newRoom.ny+35}
+  else{g.player.x=clamp(oldPlayer.x/oldWW*WW,20,WW-20);g.player.y=clamp(oldPlayer.y/oldWH*WH,30,WH-20)}
+  if(oldTarget)interactionTargetDuringResize(oldTarget);
+  else if(g.target){g.target=null}
+ }
+ cv.width=Math.max(1,Math.round(viewW*dpr));cv.height=Math.max(1,Math.round(viewH*dpr));
+ ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+function interactionTargetDuringResize(key){const r=ROOMS.find(r=>r.key===key);if(g.target)g.target=r?{x:r.nx,y:r.ny,key}:{x:DESK.x,y:DESK.y,key:'desk'}}
+window.addEventListener('resize',resize);
+if(window.visualViewport)window.visualViewport.addEventListener('resize',()=>{resize()});
+new ResizeObserver(()=>resize()).observe($('playfield'));
+resize();
+function show(id,on){$(id).classList.toggle('hidden',!on)}
+function toast(message,secs=2.9){$('toast').textContent=message;$('toast').classList.add('show');noticeTimer=secs}
+function updateSidebar(){
+ if(!g?.case)return;
+ $('sideCase').innerHTML=`<b>🚨 ${escapeHTML(g.case.title)}</b>Diferença: <strong>${escapeHTML(g.case.amount)}</strong><br>Investigue a origem e valide a solução.`;
+ $('sideCount').textContent=`${g.visited.size}/6`;
+ $('sideRooms').innerHTML=ROOMS.map(r=>`<button type="button" class="sideRoom ${g.visited.has(r.key)?'seen':''}" data-side-room="${r.key}"><span>${r.emoji} ${escapeHTML(r.name)}</span><small>${g.visited.has(r.key)?'✓ DOCUMENTO COLETADO':'? INVESTIGAR'}</small></button>`).join('');
+ $('sideRooms').querySelectorAll('[data-side-room]').forEach(b=>b.onclick=()=>interactionTarget(b.dataset.sideRoom));
+ let notes=ROOMS.filter(r=>g.visited.has(r.key)).map(r=>`<div class="entry"><strong>${r.emoji} ${escapeHTML(r.name)}</strong>${escapeHTML(g.case.clues[r.key].evidence)}</div>`).join('');
+ const cross=CROSS_DATA[g.case.id].filter(c=>g.crossed.has(c.id)).map(c=>`<div class="entry"><strong>🔗 ${escapeHTML(c.title)}</strong>${escapeHTML(c.takeaway)}</div>`).join('');
+ $('sideEvidence').innerHTML=notes+cross||'Nenhum documento ainda. Clique em um setor ou caminhe até ele para investigar.';
+}
+$('sideNotebook').onclick=()=>openNotes();
+$('sideFinish').onclick=()=>openDecision();
+function updateHUD(){ $('hudAmount').textContent=g.case.amount;$('hudTime').textContent=formatTime(g.time);$('hudClues').textContent=`${g.visited.size}/6 · 🔗${g.crossed.size}`; $('meterFill').style.width=`${100*g.time/g.total}%`; $('timeBox').classList.toggle('alert',g.time<=30)}
+function setMenu(on){show('modal',on);if(!on){g.open=null;$('modalCard').innerHTML=''}}
+function clearInput(){Object.keys(pressed).forEach(k=>pressed[k]=false);document.querySelectorAll('.ctrl').forEach(e=>e.classList.remove('pressed'))}
+function start(training=false){g={mode:'running',case:CASES[Math.floor(Math.random()*CASES.length)],time:training?TRAIN_TIME:DEFAULT_TIME,total:training?TRAIN_TIME:DEFAULT_TIME,visited:new Set(),crossed:new Set(),eventsDone:new Set(),eventsGood:0,eventsSeen:0,answers:null,player:{x:320,y:1017,facing:1,step:0},camera:{x:0,y:0},target:null,open:null,points:0,training,ended:false};show('intro',false);show('result',false);show('hud',true);show('meter',true);show('toolbar',true);show('controls',true);show('hint',true);show('desktopPanel',true);resize();g.player.x=DESK.x;g.player.y=DESK.y-24;updateSidebar();$('decideButton').textContent='📊 CONCLUIR';setMenu(false);clearInput();updateHUD();briefing()}
+$('playBtn').addEventListener('click',()=>start(false));$('trainingBtn').addEventListener('click',()=>start(true));$('againBtn').addEventListener('click',()=>start(g.training));
+function nearest(){let best=null,dist=Infinity;for(const r of [...ROOMS,DESK]){const dx=g.player.x-(r.key==='desk'?r.x:r.nx),dy=g.player.y-(r.key==='desk'?r.y:r.ny),d=Math.hypot(dx,dy);if(d<dist){dist=d;best=r}}return dist<=88?best:null}
+function interaction(){if(g.mode!=='running'||g.open)return;const n=nearest();if(!n){toast('Aproxime-se de um setor ou toque nele no mapa.');return}if(n.key==='desk')return openDecision();openSector(n.key)}
+function interactionTarget(key){if(g.mode!=='running'||g.open)return;const r=ROOMS.find(v=>v.key===key);const t=r?{x:r.nx,y:r.ny,key}:{x:DESK.x,y:DESK.y,key:'desk'};g.target=t;if(Math.hypot(g.player.x-t.x,g.player.y-t.y)<85){g.target=null;key==='desk'?openDecision():openSector(key)}}
+function modal(html,type){g.open=type;clearInput();$('modalCard').innerHTML=html;show('modal',true)}
+function openSector(key){const r=ROOMS.find(x=>x.key===key),cl=g.case.clues[key],p=PERSONAS[key],taken=g.visited.has(key);
+ const available=CROSS_DATA[g.case.id].filter(c=>c.rooms.includes(key)&&c.rooms.every(k=>g.visited.has(k)));
+ const crossBtns=available.map(c=>`<button class="secondaryBtn" data-cross="${c.id}" style="font-size:12px">${g.crossed.has(c.id)?'✅ CONFRONTO REGISTRADO':'🔎 CONFRONTAR PISTAS'}: ${escapeHTML(c.title)}</button>`).join('');
+ modal(`<div class="smallCaps">${r.emoji} SETOR: ${escapeHTML(r.name)}</div><div class="persona"><div class="avatar">${p.icon}</div><div><strong>${escapeHTML(cl.person)}</strong><small>${escapeHTML(p.joke)}</small></div></div><h2 id="modalTitle" style="font-size:19px;margin-top:13px">O que aconteceu aqui?</h2><div class="dialogQuote">“${escapeHTML(cl.quote)}”</div>${taken?`<div class="evidence"><b>📋 DOCUMENTO ENCONTRADO</b>${escapeHTML(cl.evidence)}</div>`:'<p class="miniText">Conversar é um começo. Peça uma evidência verificável antes de tirar conclusões.</p>'}${available.length?'<div class="crossTag">🧩 Há informações que podem ser confrontadas com outro setor.</div>':''}${crossBtns}<button class="primaryBtn" id="collectBtn">${taken?'↩ VOLTAR À INVESTIGAÇÃO':'📄 SOLICITAR DOCUMENTO'}</button><button class="tertiaryBtn" id="closeSector" style="display:block;margin:auto">Fechar</button>`,'sector');
+ $('collectBtn').onclick=()=>{if(!g.visited.has(key)){g.visited.add(key);updateHUD();updateSidebar();sound(680,.12);openSector(key)}else setMenu(false)};
+ $('closeSector').onclick=()=>setMenu(false);
+ document.querySelectorAll('[data-cross]').forEach(b=>b.onclick=()=>openConfront(b.dataset.cross,key));}
+function openConfront(id,origin){const c=CROSS_DATA[g.case.id].find(x=>x.id===id);if(!c||!c.rooms.every(k=>g.visited.has(k)))return;
+ const done=g.crossed.has(id),options=shuffle([{id:'good',text:c.takeaway},{id:'bad',text:c.wrong}]);
+ modal(`<div class="smallCaps">🧩 CRUZAMENTO DE EVIDÊNCIAS</div><h2 id="modalTitle">${escapeHTML(c.title)}</h2><div class="crossTag">${c.rooms.map(k=>ROOMS.find(r=>r.key===k).emoji+' '+ROOMS.find(r=>r.key===k).name).join('  ↔  ')}</div><div class="dialogQuote">${escapeHTML(c.ask)}</div>${done?`<div class="evidence"><b>✅ CONCLUSÃO JÁ REGISTRADA</b>${escapeHTML(c.takeaway)}</div>`:`<p class="stepLabel">Qual interpretação é sustentada pelos documentos?</p>${options.map(o=>`<label class="choice"><input type="radio" name="crossChoice" value="${o.id}"><span>${escapeHTML(o.text)}</span></label>`).join('')}<p class="miniText" id="crossFeedback" aria-live="polite"></p>`}<button class="primaryBtn" id="verifyCross">${done?'📒 REVER ANÁLISE':'🔍 CONFRONTAR DOCUMENTOS'}</button><button class="secondaryBtn" id="backCross">VOLTAR À CONVERSA</button>`,'cross');
+ $('verifyCross').onclick=()=>{if(!done){const v=document.querySelector('input[name="crossChoice"]:checked');if(!v){$('crossFeedback').textContent='Escolha uma interpretação antes de comparar os documentos.';return}if(v.value!=='good'){$('crossFeedback').textContent='⚠️ Essa conclusão não explica os dois documentos. Releia as informações e tente outra hipótese.';sound(270,.11);return}g.crossed.add(id);updateHUD();updateSidebar();sound(840,.13)}modal(`<div class="smallCaps">🔎 CONFRONTO CONCLUÍDO</div><h2 id="modalTitle">Uma peça a mais no quebra-cabeça!</h2><div class="dialogQuote">${escapeHTML(c.answer)}</div><div class="evidence"><b>📒 ANÁLISE DOCUMENTADA</b>${escapeHTML(c.takeaway)}</div><button class="primaryBtn" id="okCross">CONTINUAR INVESTIGAÇÃO</button>`,'crossResult');$('okCross').onclick=()=>setMenu(false)};
+ $('backCross').onclick=()=>openSector(origin);
+}
+function briefing(){g.mode='brief';modal(`<div class="smallCaps">🚨 ALERTA DE FECHAMENTO</div><h2 id="modalTitle">${escapeHTML(g.case.title)}</h2><p style="text-align:center;font-size:17px;font-weight:1000;color:#b86735">Diferença: ${g.case.amount}</p><div class="dialogQuote">${escapeHTML(g.case.alert)}</div><p><b>Sua missão:</b> circular pelos setores, entender os fatos e recomendar o tratamento correto. Você precisa de pelo menos duas evidências para concluir; confrontar informações entre setores aumenta a qualidade da análise.</p>${g.case.id==='competencia'?'<p class="miniText" style="text-align:center">Neste caso, a nota fiscal já foi emitida e precisa chegar ao Fiscal antes do corte do fechamento.</p>':''}<p class="small" style="text-align:center">O tempo começa depois que você apertar o botão.</p><button class="primaryBtn" id="goBrief">🚀 INICIAR INVESTIGAÇÃO</button>`,'brief');$('goBrief').onclick=()=>{g.mode='running';setMenu(false);toast('🚨 Encontre a causa antes do tempo acabar!',3);sound(600,.12)}}
+function openMap(){if(g.mode!=='running'||g.open)return;modal(`<div class="smallCaps">PLANTA DA EMPRESA</div><h2 id="modalTitle">🗺️ Para onde vamos?</h2><p style="text-align:center">Escolha um setor para caminhar até lá. Você também pode usar as setas ou tocar diretamente no mapa.</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${ROOMS.map(r=>`<button class="secondaryBtn" style="margin:0;font-size:12px;padding:13px 5px;min-height:74px" data-go="${r.key}">${r.emoji}<br>${r.name}<br><span style="font-size:10px;color:#5a8b8d">${g.visited.has(r.key)?'✓ INVESTIGADO':'? PENDENTE'}</span></button>`).join('')}</div><button class="secondaryBtn" data-go="desk">🏁 VOLTAR À CONTROLADORIA</button><button class="tertiaryBtn" id="closeMap" style="display:block;margin:auto">Cancelar</button>`,'map');$('modalCard').querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{const key=b.dataset.go;setMenu(false);interactionTarget(key);toast(`🚶 Indo para ${key==='desk'?'CONTROLADORIA':ROOMS.find(r=>r.key===key).name}`,2.5)});$('closeMap').onclick=()=>setMenu(false)}
+function openNotes(){if(g.mode!=='running'||g.open)return;
+ const list=ROOMS.map(r=>g.visited.has(r.key)?`<div class="note"><b>${r.emoji} ${r.name}</b>${escapeHTML(g.case.clues[r.key].evidence)}</div>`:'').join('');
+ const linked=CROSS_DATA[g.case.id].filter(c=>c.rooms.every(k=>g.visited.has(k))).map(c=>g.crossed.has(c.id)?`<div class="note crossNote"><b>✅ ${escapeHTML(c.title)}</b>${escapeHTML(c.takeaway)}</div>`:`<div class="note crossNote"><b>🧩 Confronto pendente: ${escapeHTML(c.title)}</b>Volte a ${c.rooms.map(k=>ROOMS.find(r=>r.key===k).name).join(' ou ')} e escolha CONFRONTAR PISTAS.</div>`).join('');
+ modal(`<div class="smallCaps">CADERNO DO CONTROLLER</div><h2 id="modalTitle">📒 Suas evidências</h2><p style="text-align:center"><b>${escapeHTML(g.case.title)} · ${g.case.amount}</b><br><b>${g.visited.size}/6</b> documentos · <b>${g.crossed.size}/2</b> confrontos. <strong>Nem toda pista é a causa.</strong></p><div class="notes">${list||'<div class="note muted">Nenhuma evidência. Caminhe até um setor e peça documentos.</div>'}${linked?'<p class="stepLabel">EVIDÊNCIAS CRUZADAS</p>'+linked:''}</div><button class="primaryBtn" id="closeNotes">VOLTAR À INVESTIGAÇÃO</button>`,'notes');$('closeNotes').onclick=()=>setMenu(false)}
+function openDecision(){if(g.mode!=='running'||g.open)return;if(g.visited.size<2){toast('Investigue pelo menos 2 setores antes de concluir.');return}
+ const ca=shuffle(g.case.causes),fi=shuffle(g.case.fixes);
+ modal(`<div class="smallCaps">⏱️ ETAPA 1 DE 2 — INVESTIGAR E CORRIGIR</div><h2 id="modalTitle">📊 Decisão do Controller</h2><p>Diferença: <strong>${g.case.amount}</strong> · <strong>${g.visited.size}/6</strong> documentos · <strong>${g.crossed.size}/2</strong> confrontos.<br>O fechamento só estará concluído após validar a correção.</p>${g.crossed.size===0?'<div class="crossTag">⚠️ Você ainda não confrontou dados entre setores. Uma decisão sem cruzamento pode deixar riscos escondidos.</div>':''}<div class="stepLabel">1. Qual é a causa raiz?</div>${ca.map(x=>`<label class="choice"><input type="radio" name="cause" value="${x.id}"><span>${escapeHTML(x.text)}</span></label>`).join('')}<div class="stepLabel">2. Qual tratamento você recomenda?</div>${fi.map(x=>`<label class="choice"><input type="radio" name="fix" value="${x.id}"><span>${escapeHTML(x.text)}</span></label>`).join('')}<button class="primaryBtn" id="confirmDecision">🛠️ APLICAR TRATAMENTO</button><button class="secondaryBtn" id="backDecision">CONTINUAR INVESTIGANDO</button><p class="small" style="text-align:center">O relógio continua correndo durante as decisões.</p>`,'decision');
+ $('confirmDecision').onclick=()=>{const c=document.querySelector('input[name="cause"]:checked'),f=document.querySelector('input[name="fix"]:checked');if(!c||!f){toast('Selecione uma causa e um tratamento.');return}openValidation(c.value,f.value)};
+ $('backDecision').onclick=()=>setMenu(false)}
+function openValidation(cause,fix){const v=VALIDATIONS[g.case.id];
+ modal(`<div class="smallCaps">✅ ETAPA 2 DE 2 — VALIDAR A CORREÇÃO</div><h2 id="modalTitle">O número voltou a bater?</h2><p>Você registrou uma hipótese e escolheu um tratamento. Antes da liberação, é preciso demonstrar que a divergência foi tratada corretamente.</p><div class="stepLabel">${escapeHTML(v.prompt)}</div>${shuffle(v.answers).map(a=>`<label class="choice"><input type="radio" name="check" value="${a.id}"><span>${escapeHTML(a.text)}</span></label>`).join('')}<button class="primaryBtn" id="releaseButton">🔒 VALIDAR E ENCERRAR FECHAMENTO</button><button class="secondaryBtn" id="backValidation">↩ REVISAR CAUSA E TRATAMENTO</button><p class="small" style="text-align:center">Este é o último passo. Após liberar, a decisão não pode ser alterada.</p>`,'validation');
+ $('releaseButton').onclick=()=>{const check=document.querySelector('input[name="check"]:checked');if(!check){toast('Escolha como validar o fechamento.');return}g.answers={cause,fix,check:check.value};finish(cause===g.case.cause&&fix===g.case.fix&&check.value===v.correct?'win':'wrong')};
+ $('backValidation').onclick=()=>{setMenu(false);openDecision()};
+}
+function openEvent(ev){g.eventsDone.add(ev.id);g.eventsSeen++;
+ modal(`<div class="smallCaps">⚡ IMPREVISTO NO FECHAMENTO</div><h2 id="modalTitle">${escapeHTML(ev.title)}</h2><div class="dialogQuote">${escapeHTML(ev.message)}</div><p class="miniText">A Controladoria precisa reagir. Esta decisão influencia sua avaliação de julgamento profissional.</p>${shuffle(ev.options).map((o,i)=>`<button class="${i?'secondaryBtn':'primaryBtn'}" data-event-choice="${o.good?'good':'bad'}" style="font-size:12px">${escapeHTML(o.text)}</button>`).join('')}<p class="small" style="text-align:center">Enquanto isso, o tempo continua passando...</p>`,'event');
+ document.querySelectorAll('[data-event-choice]').forEach(b=>b.onclick=()=>{const choice=ev.options.find(x=>x.good===(b.dataset.eventChoice==='good'));if(choice.good)g.eventsGood++;modal(`<div class="smallCaps">${choice.good?'✅ DECISÃO RESPONSÁVEL':'⚠️ CONSEQUÊNCIA'}</div><h2 id="modalTitle">${choice.good?'Boa resposta!':'Essa escolha tem riscos.'}</h2><div class="dialogQuote">${escapeHTML(choice.reply)}</div><button class="primaryBtn" id="eventContinue">VOLTAR AO FECHAMENTO</button>`,'eventResult');$('eventContinue').onclick=()=>setMenu(false)});
+ sound(790,.08);
+}
+function checkEvents(){if(g.mode!=='running'||g.open)return;const ev=EVENTS.find(x=>!g.eventsDone.has(x.id)&&g.visited.size>=x.after);if(ev)openEvent(ev)}
+function pause(){if(g.mode!=='running')return;if(g.open){toast('Feche a janela atual para pausar.');return}g.mode='pause';modal(`<div class="smallCaps">PAUSA DE FECHAMENTO</div><h2 id="modalTitle">☕ Tudo sob controle?</h2><p style="text-align:center">O cronômetro está pausado. A diretoria ainda está na linha...</p><button class="primaryBtn" id="resumeBtn">▶ CONTINUAR MISSÃO</button><button class="secondaryBtn" id="soundBtn">${muted?'🔇 ATIVAR SONS':'🔊 DESATIVAR SONS'}</button><button class="tertiaryBtn" id="quitBtn" style="display:block;margin:9px auto 0">Voltar ao início</button><p id="pauseTip">PC: <kbd>P</kbd> para pausar · <kbd>E</kbd> para investigar</p>`,'pause');$('resumeBtn').onclick=resume;$('soundBtn').onclick=()=>{muted=!muted;$('soundBtn').textContent=muted?'🔇 ATIVAR SONS':'🔊 DESATIVAR SONS'};$('quitBtn').onclick=home}
+function resume(){if(g.mode!=='pause')return;g.mode='running';setMenu(false)}
+function home(){setMenu(false);g.mode='intro';show('intro',true);for(const x of ['hud','meter','toolbar','controls','hint','near','desktopPanel'])show(x,false)}
+function highscore(){try{return Number(localStorage.getItem('missao-fechamento-recorde-v2'))||0}catch(_){return 0}}
+function saveHighscore(n){try{if(n>highscore())localStorage.setItem('missao-fechamento-recorde-v2',String(n))}catch(_){}}
+function finish(kind){if(g.ended)return;g.ended=true;g.mode='ended';g.target=null;setMenu(false);clearInput();for(const x of ['hud','meter','toolbar','controls','hint','near','desktopPanel'])show(x,false);
+ const answers=g.answers||{},causeOK=answers.cause===g.case.cause,fixOK=answers.fix===g.case.fix,checkOK=answers.check===VALIDATIONS[g.case.id].correct;
+ const scoreCause=causeOK?25:0,scoreFix=fixOK?15:0,scoreCheck=checkOK?10:0;
+ const scoreClues=Math.round(g.visited.size/6*15),scoreCross=Math.round(g.crossed.size/2*15);
+ const scoreTime=Math.round(g.time/g.total*10),scoreEvents=g.eventsSeen?Math.round(g.eventsGood/g.eventsSeen*10):10;
+ const points=clamp(scoreCause+scoreFix+scoreCheck+scoreClues+scoreCross+scoreTime+scoreEvents,0,100);
+ g.points=points;g.outcome=kind;g.rank=RANKS.find(x=>points>=x.min).name;
+ const old=highscore();if(kind==='win')saveHighscore(points);
+ const correct=kind==='win',timed=kind==='timeout';
+ $('resultEyebrow').textContent=correct?'MISSÃO CUMPRIDA':timed?'TEMPO ESGOTADO':'FECHAMENTO EM RISCO';$('resultEmoji').textContent=correct?'🏆':timed?'⏰':'📉';$('resultTitle').textContent=correct?'Fechamento validado!':timed?'O prazo acabou!':'Fechamento não confiável!';
+ $('resultDescription').textContent=correct?'Você identificou a causa, aplicou a tratativa adequada e definiu uma validação consistente. A diretoria pode receber um resultado fundamentado.':timed?'O prazo acabou com uma divergência pendente. Não se deve liberar o resultado como definitivo sem explicitar o risco e encaminhar a correção.':'A correção proposta não garantiu um fechamento confiável. Reconhecer a causa, tratar e revalidar exige três decisões distintas.';
+ $('resultPoints').textContent=points.toLocaleString('pt-BR');$('resultClues').textContent=`${g.visited.size}/6`;$('resultTime').textContent=formatTime(g.time);$('resultLesson').textContent=g.case.lesson;
+ $('resultRank').textContent=g.rank;$('rankFill').style.width=`${points}%`;
+ $('scoreDetails').innerHTML=`<div>Causa identificada <b>${scoreCause}/25</b></div><div>Tratamento <b>${scoreFix}/15</b></div><div>Validação <b>${scoreCheck}/10</b></div><div>Documentos <b>${scoreClues}/15</b></div><div>Pistas cruzadas <b>${scoreCross}/15</b></div><div>Prazo <b>${scoreTime}/10</b></div><div>Julgamento <b>${scoreEvents}/10</b></div>`;
+ $('resultFeedback').textContent=timed?'Você esgotou o prazo de investigação. Preserve a rastreabilidade, comunique a pendência e a necessidade de nova validação antes de divulgar valores definitivos.':`Causa: ${causeOK?'correta':'incorreta'}. Tratamento: ${fixOK?'adequado':'inadequado'}. Verificação: ${checkOK?'adequada':'inadequada'}. Você confrontou ${g.crossed.size} de 2 conjuntos de dados e tomou ${g.eventsGood} decisões responsáveis em ${g.eventsSeen} imprevistos.`;
+ $('resultRecord').textContent=correct?(points>old?'🌟 Novo recorde pessoal neste navegador!':`Recorde pessoal: ${old} de 100 pontos`):'Você pode tentar outra combinação de evidências e decisões.';
+ $('shareMsg').textContent='';$('pixText').value=PIX;$('pixMsg').textContent='';show('result',true);if(correct){sound(740,.15);setTimeout(()=>sound(960,.22),135)}else sound(230,.25)}
+function shareText(){const url=location.protocol.startsWith('http')?'\n'+location.href:'';return `🕵️ MISSÃO FECHAMENTO\n${g.points}/100 pontos · ${g.rank} · ${g.visited.size}/6 documentos · ${g.crossed.size}/2 confrontos\nVocê conseguiria encontrar a diferença antes da diretoria pedir o resultado?${url}`}
+async function copyText(t){try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(t);return true}}catch(_){}try{let e=document.createElement('textarea');e.value=t;e.style.cssText='position:fixed;top:0;left:0;opacity:0';document.body.appendChild(e);e.select();const ok=document.execCommand('copy');e.remove();return ok}catch(_){return false}}
+$('pixCopy').onclick=async()=>{$('pixMsg').textContent=(await copyText(PIX))?'Código Pix copiado. Obrigado pelo carinho! ☕':'Selecione o código acima para copiar manualmente.'};
+$('shareBtn').onclick=async()=>{let txt=shareText();try{if(navigator.share){await navigator.share({title:'Missão Fechamento',text:txt});$('shareMsg').textContent='Compartilhado!';return}}catch(e){if(e.name==='AbortError')return} $('shareMsg').textContent=(await copyText(txt))?'Resultado copiado! É só colar onde quiser.':'Copie o endereço da página para compartilhar.'};
+$('notesButton').onclick=openNotes;$('mapButton').onclick=openMap;$('decideButton').onclick=openDecision;$('pauseButton').onclick=pause;$('interact').onclick=interaction;
+window.addEventListener('keydown',ev=>{const k=ev.key.toLowerCase();if(['arrowleft','arrowright','arrowup','arrowdown',' ','w','a','s','d','e','p','escape','enter'].includes(k))ev.preventDefault();if(g.mode==='intro'&&k==='enter'){start(false);return}if(g.mode==='pause'&&(k==='p'||k==='escape')){resume();return}if(g.mode!=='running')return;if(g.open){if(k==='escape'&&g.open!=='decision')setMenu(false);return}if(k==='p'||k==='escape'){pause();return}if(k==='e'||k===' '){if(!ev.repeat)interaction();return}const dirs={w:'up',arrowup:'up',s:'down',arrowdown:'down',a:'left',arrowleft:'left',d:'right',arrowright:'right'};if(dirs[k]){pressed[dirs[k]]=true;g.target=null}});
+window.addEventListener('keyup',ev=>{const k=ev.key.toLowerCase();const dirs={w:'up',arrowup:'up',s:'down',arrowdown:'down',a:'left',arrowleft:'left',d:'right',arrowright:'right'};if(dirs[k])pressed[dirs[k]]=false});
+window.addEventListener('blur',clearInput);
+for(const btn of document.querySelectorAll('[data-dir]')){const dir=btn.dataset.dir;const down=e=>{e.preventDefault();if(g.mode!=='running'||g.open)return;btn.setPointerCapture?.(e.pointerId);pressed[dir]=true;btn.classList.add('pressed');g.target=null},up=e=>{e.preventDefault();pressed[dir]=false;btn.classList.remove('pressed')};btn.addEventListener('pointerdown',down);['pointerup','pointercancel','lostpointercapture'].forEach(t=>btn.addEventListener(t,up))}
+cv.addEventListener('pointerdown',ev=>{if(g.mode!=='running'||g.open)return;const rect=cv.getBoundingClientRect(),px=(ev.clientX-rect.left)/zoom+g.camera.x,py=(ev.clientY-rect.top)/zoom+g.camera.y;let dest=null;for(const r of ROOMS){if(px>=r.x&&px<=r.x+r.w&&py>=r.y&&py<=r.y+r.h)dest=r.key}if(Math.hypot(px-DESK.x,py-DESK.y)<100)dest='desk';if(dest)interactionTarget(dest);else g.target={x:clamp(px,20,WW-20),y:clamp(py,26,WH-20),key:null}});
+function rrect(x,y,w,h,r,color,stroke=null,sw=1){ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();if(stroke){ctx.lineWidth=sw;ctx.strokeStyle=stroke;ctx.stroke()}}
+function text(str,x,y,size=12,color='#314d61',align='center',weight='900'){ctx.font=`${weight} ${size}px 'Trebuchet MS',Verdana,sans-serif`;ctx.textAlign=align;ctx.textBaseline='middle';ctx.fillStyle=color;ctx.fillText(str,x,y)}
+function character(x,y,color,walking=0,controller=false){ctx.save();ctx.translate(x,y);const bob=Math.sin(walking)*Math.min(2,Math.abs(walking)*.15);ctx.fillStyle='#6a92a442';ctx.beginPath();ctx.ellipse(0,24,16,6,0,0,Math.PI*2);ctx.fill();rrect(-10,4+bob,20,24,6,color,'#456278',1.3);rrect(-7,22+bob,6,11,2,'#345c76');rrect(1,22+bob,6,11,2,'#345c76');rrect(-14,6+bob,5,14,3,'#edbc93');rrect(9,6+bob,5,14,3,'#edbc93');ctx.fillStyle='#f4c5a3';ctx.beginPath();ctx.arc(0,-5+bob,12,0,Math.PI*2);ctx.fill();ctx.fillStyle=controller?'#344a65':'#6b5847';ctx.beginPath();ctx.arc(0,-10+bob,12,Math.PI,Math.PI*2);ctx.fill();ctx.fillStyle='#344e60';ctx.fillRect(-5,-5+bob,2,2);ctx.fillRect(4,-5+bob,2,2);ctx.strokeStyle='#ad765a';ctx.beginPath();ctx.arc(0,0+bob,3,.15,Math.PI-.15);ctx.stroke();if(controller){rrect(-3,10+bob,6,13,1,'#f6cf63');ctx.fillStyle='#f6f6f6';ctx.fillRect(-7,7+bob,14,3)}ctx.restore()}
+function drawDesk(x,y,kind){rrect(x-42,y-11,84,33,5,'#9cbecc','#648da5',1);rrect(x-35,y-18,70,28,5,'#f8fdfe','#abc8d3');rrect(x-10,y-32,27,21,3,'#4e7997');rrect(x-6,y-28,19,13,1,'#d2f5ef');rrect(x-4,y-9,20,4,1,'#a6a9ad');if(kind==='paper'){rrect(x+21,y-12,16,21,1,'#fff9dd');text('≡',x+29,y-2,13,'#ba9e63')}else if(kind==='box'){rrect(x+22,y-16,21,21,2,'#dfb576','#a87e50')}else{rrect(x+24,y-12,17,21,2,'#f6ce65')}}
+function drawRoom(r,i){
+ if(wide){
+  rrect(r.x+4,r.y+6,r.w,r.h,15,'#8faeb93b');rrect(r.x,r.y,r.w,r.h,15,r.color,r.wall,4);
+  rrect(r.x+8,r.y+8,r.w-16,39,9,'#ffffffa9');text(r.emoji+'  '+r.name,r.x+r.w/2,r.y+28,15,'#315773');
+  const cy=r.y+Math.min(101,r.h*.42), rw=r.w;
+  if(i===0){for(let j=0;j<3;j++){const bx=r.x+rw*(.12+j*.28);rrect(bx,cy-5,rw*.21,19,4,'#b7cbd2','#91b2bd');rrect(bx+5,cy-12,18,11,2,'#7dafca');}}
+  else if(i===1){for(let j=0;j<3;j++){rrect(r.x+rw*(.11+j*.28),cy-13,rw*.22,34,4,'#c89f6e','#a37e51');}}
+  else{drawDesk(r.x+rw*.27,cy,i===3?'paper':'desk');drawDesk(r.x+rw*.73,cy,i===4?'box':'paper')}
+  const foot=r.y+r.h-31;rrect(r.x+12,foot,r.w-24,23,8,'#ffffffa3');text('CLIQUE PARA INVESTIGAR',r.x+r.w/2,foot+12,10,'#608293');
+  character(r.nx,r.ny,r.npc,0);
+  if(g.visited.has(r.key)){rrect(r.x+r.w-39,r.y+49,29,24,9,'#54b79a','#fff',2);text('✓',r.x+r.w-24,r.y+61,18,'white')}
+  else{rrect(r.nx+16,r.ny-52,26,26,10,'#f7cf67','#fff',2);text('!',r.nx+29,r.ny-39,18,'#805b24')}
+  return;
+ }
+ rrect(r.x+5,r.y+7,r.w,r.h,14,'#92aec12e');rrect(r.x,r.y,r.w,r.h,14,r.color,r.wall,4);rrect(r.x+8,r.y+9,r.w-16,40,10,'#fffef8b8');text(r.emoji+'  '+r.name,r.x+r.w/2,r.y+30,14,'#315773');
+ // Neat office/factory props around the NPC, leaving open space to walk.
+ if(i===0){for(let j=0;j<3;j++){rrect(r.x+18+j*74,r.y+79,59,19,4,'#b7cbd2','#91b2bd');rrect(r.x+24+j*74,r.y+75,18,10,2,'#7dafca');rrect(r.x+46+j*74,r.y+75,10,10,1,'#ebbb71')}rrect(r.x+19,r.y+183,47,21,4,'#f3b978');rrect(r.x+204,r.y+183,47,21,4,'#f3b978')}
+ else if(i===1){for(let j=0;j<3;j++){rrect(r.x+15+j*83,r.y+69,68,30,4,'#bd925e','#98734b');for(let t=0;t<3;t++)rrect(r.x+20+j*83+t*19,r.y+72,16,20,1,'#e7c18f')}rrect(r.x+25,r.y+182,49,33,4,'#b69a6f');rrect(r.x+203,r.y+182,49,33,4,'#b69a6f')}
+ else {drawDesk(r.x+70,r.y+95,i===3?'paper':'desk');drawDesk(r.x+208,r.y+95,i===4?'box':'paper')}
+ rrect(r.x+22,r.y+194,r.w-44,18,6,'#ffffff91');text('TOQUE AQUI PARA INVESTIGAR',r.x+r.w/2,r.y+203,9,'#608293');
+ character(r.nx,r.ny,r.npc,0);if(g.visited.has(r.key)){rrect(r.x+r.w-44,r.y+51,30,24,9,'#54b79a','#fff',2);text('✓',r.x+r.w-29,r.y+63,18,'white')}else{rrect(r.nx+15,r.ny-52,26,26,10,'#f7cf67','#fff',2);text('!',r.nx+28,r.ny-39,18,'#805b24')}
+}
+function drawMap(t){
+ if(wide){
+  ctx.fillStyle='#dcf3f8';ctx.fillRect(0,0,WW,WH);
+  for(let y=0;y<WH;y+=42)for(let x=0;x<WW;x+=42){ctx.fillStyle=(((x+y)/42)%2===0)?'#ffffff41':'#9dd1de16';ctx.fillRect(x,y,40,40)}
+  // Corredor principal e escritório de Controladoria, sem paredes entre as áreas.
+  rrect(20,WH*.53,WW-40,18,7,'#b4dee8ad');
+  for(let x=35;x<WW-35;x+=65)rrect(x,WH*.53+6,23,5,2,'#ffffff8a');
+  for(const [i,r] of ROOMS.entries())drawRoom(r,i);
+  const dx=DESK.x,dy=DESK.y;
+  rrect(dx-101,dy-62,202,103,14,'#fff4d4','#d0b978',3);rrect(dx-91,dy-54,182,29,8,'#ffffffd4');text('🏁 CONTROLADORIA',dx,dy-40,13,'#645531');drawDesk(dx,dy+2,'paper');
+  if(g.visited.size>=2){rrect(dx+67,dy-17,24,24,8,'#51b597','#fff',2);text('✓',dx+79,dy-5,16,'white')}
+  if(g.target){ctx.strokeStyle='#3486c8a9';ctx.lineWidth=2;ctx.setLineDash([6,6]);ctx.beginPath();ctx.moveTo(g.player.x,g.player.y);ctx.lineTo(g.target.x,g.target.y);ctx.stroke();ctx.setLineDash([]);ctx.strokeStyle='#4cbbad';ctx.beginPath();ctx.arc(g.target.x,g.target.y,14+Math.sin(t*4)*2,0,2*Math.PI);ctx.stroke()}
+  character(g.player.x,g.player.y,'#3177b9',g.player.step,true);text('VOCÊ',g.player.x,g.player.y-46,12,'#214f75');
+  return;
+ }
+ ctx.fillStyle='#dcf3f8';ctx.fillRect(0,0,WW,WH); // walkway striped patterns
+ for(let y=0;y<WH;y+=42){for(let x=0;x<WW;x+=42){ctx.fillStyle=((x+y)/42)%2===0?'#ffffff42':'#9dd1de18';ctx.fillRect(x,y,40,40)}}
+ rrect(296,67,48,965,12,'#b8dfe7a8');for(let y=86;y<1020;y+=40)rrect(315,y,9,17,3,'#ffffffb5');
+ for(const [i,r] of ROOMS.entries())drawRoom(r,i);
+ rrect(231,994,178,111,15,'#fff6d5','#d0b978',4);rrect(244,1002,152,32,8,'#ffffffc9');text('🏁 CONTROLADORIA',320,1019,13,'#645531');drawDesk(320,1065,'paper');if(g.visited.size>=2){rrect(345,1029,34,28,10,'#51b597','#fff',2);text('✓',362,1043,18,'white')}
+ for(let i=0;i<24;i++){const x=14+(i*113)%612,y=28+(i*169)%1073;if(ROOMS.some(r=>x>r.x-10&&x<r.x+r.w+10&&y>r.y-10&&y<r.y+r.h+10))continue;ctx.fillStyle='#7bb5b488';ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill()}
+ if(g.target){ctx.strokeStyle='#3486c8ad';ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(g.player.x,g.player.y);ctx.lineTo(g.target.x,g.target.y);ctx.stroke();ctx.setLineDash([]);ctx.strokeStyle='#4cbbad';ctx.beginPath();ctx.arc(g.target.x,g.target.y,14+Math.sin(t*4)*2,0,2*Math.PI);ctx.stroke()}
+ character(g.player.x,g.player.y,'#3177b9',g.player.step,true);text('VOCÊ',g.player.x,g.player.y-48,12,'#214f75');
+}
+function update(dt){if(noticeTimer>0){noticeTimer-=dt;if(noticeTimer<=0)$('toast').classList.remove('show')}
+ if(g.mode!=='running')return;
+ g.time=Math.max(0,g.time-dt);if(g.time===0){finish('timeout');return}updateHUD();
+ if(g.open){show('near',false);return}
+ checkEvents();if(g.open){show('near',false);return}
+ let vx=(pressed.right?1:0)-(pressed.left?1:0),vy=(pressed.down?1:0)-(pressed.up?1:0);
+ if(!vx&&!vy&&g.target){const dx=g.target.x-g.player.x,dy=g.target.y-g.player.y,d=Math.hypot(dx,dy);if(d<10){const key=g.target.key;g.target=null;if(key){if(key==='desk')openDecision();else openSector(key)}else toast('Aproxime-se de um setor para conversar.')}else{vx=dx/d;vy=dy/d}}
+ if(vx||vy){const n=Math.hypot(vx,vy);vx/=n;vy/=n;g.player.x=clamp(g.player.x+vx*speed*dt,12,WW-12);g.player.y=clamp(g.player.y+vy*speed*dt,25,WH-18);g.player.step+=dt*10;g.player.facing=vx>=0?1:-1}
+ const near=nearest();if(near){show('near',true);$('near').textContent=near.key==='desk'?'📊 E / INVESTIGAR: CONCLUIR FECHAMENTO':`🔎 E / INVESTIGAR: ${near.name}`}else show('near',false)
+}
+function frame(time){
+ const dt=Math.min(.06,Math.max(0,(time-last)/1000));last=time;update(dt);
+ ctx.save();ctx.clearRect(0,0,viewW,viewH);
+ if(g.mode==='intro'){ctx.fillStyle='#d9f2fb';ctx.fillRect(0,0,viewW,viewH)}
+ else{
+  const visibleW=viewW/zoom,visibleH=viewH/zoom;
+  const camx=clamp(g.player.x-visibleW/2,0,Math.max(0,WW-visibleW));
+  const camy=clamp(g.player.y-visibleH*.52,0,Math.max(0,WH-visibleH));
+  g.camera.x=camx;g.camera.y=camy;
+  ctx.scale(zoom,zoom);ctx.translate(-camx,-camy);drawMap(time/1000)
+ }
+ ctx.restore();requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
